@@ -1,254 +1,200 @@
-import joblib
-import numpy as np
-import os
-import pandas as pd
-import plotly.express as px
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 import streamlit as st
+import socket
+import urllib.request
+import json
+import re
 
+# Page Configuration
 st.set_page_config(
-    page_title="AI-NIDS | Fatehi Alshami", page_icon="🛡️", layout="wide"
+    page_title="AI-NIDS | Wi-Fi & IP Safety Checker",
+    page_icon="🛡️",
+    layout="centered"
 )
 
-# الشريط الجانبي للتعريف بالمطور
+# Custom CSS
+st.markdown("""
+<style>
+    .main-title {
+        text-align: center;
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #1E88E5;
+        margin-bottom: 0.2rem;
+    }
+    .sub-title {
+        text-align: center;
+        font-size: 1.05rem;
+        color: #90A4AE;
+        margin-bottom: 2rem;
+    }
+    .safe-card {
+        padding: 1.5rem;
+        border-radius: 12px;
+        background-color: rgba(46, 125, 50, 0.15);
+        border: 2px solid #2E7D32;
+        margin-top: 1.5rem;
+    }
+    .danger-card {
+        padding: 1.5rem;
+        border-radius: 12px;
+        background-color: rgba(198, 40, 40, 0.15);
+        border: 2px solid #C62828;
+        margin-top: 1.5rem;
+    }
+    .warn-card {
+        padding: 1.5rem;
+        border-radius: 12px;
+        background-color: rgba(245, 124, 0, 0.15);
+        border: 2px solid #F57C00;
+        margin-top: 1.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Sidebar - Developer Info
 with st.sidebar:
-  st.markdown("## 🛡️ AI-NIDS Defense")
-  st.title("Developer Profile")
-  st.markdown("**Engineered by:**\nFatehi Abdulfattah Mohammed Ali Alshami")
-  st.markdown("**GitHub:** `@Fatehi-CS`")
-  st.markdown("**Initiative:** The Digital Shield")
-  st.divider()
-  st.markdown("**Certifications:**")
-  st.markdown("- Cisco Junior Cybersecurity Analyst")
-  st.markdown("- Cisco Modern AI Principles")
-  st.divider()
-  st.caption("© 2026 Fatehi Alshami | AI & Cybersecurity Research")
+    st.image("https://icons8.com", width=75)
+    st.title("The Digital Shield")
+    st.markdown("**Pre-Connection Wi-Fi & IP Security Scanner (AI-NIDS)**")
+    st.divider()
+    st.markdown("### 👨‍💻 المطور | Developer")
+    st.write("**Fatehi Abdulfattah Mohammed Ali Alshami**")
+    st.markdown("🔗 [GitHub Repository](https://github.com)")
+    st.divider()
+    st.markdown("### 🎓 الشهادات | Certifications")
+    st.info("• Cisco Junior Cybersecurity Analyst\n• Cisco Modern AI Principles")
 
-st.title("🛡️ AI-Powered Network Intrusion Detection System (AI-NIDS)")
-st.markdown(
-    "### Intelligent Cyber Threat Analysis & Real-Time Traffic Classification"
-)
-st.caption(
-    "🚀 **Engineered & Developed by Fatehi Abdulfattah Mohammed Ali Alshami"
-    " (@Fatehi-CS)** | Part of The Digital Shield Ecosystem"
-)
+# Main Header
+st.markdown('<div class="main-title">🛡️ فاحص أمان الشبكة والـ IP</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">تأكد من أمان أي شبكة Wi-Fi في كافيه أو مكان عام عبر فحص عنوان الـ IP الخاص بها</div>', unsafe_allow_html=True)
 
-MODEL_FILE = "nids_model.joblib"
-ENCODER_FILE = "encoders.joblib"
+# Input Box
+ip_input = st.text_input(
+    "أدخل أو الصق عنوان الـ IP الخاص بالشبكة هنا (Paste Network IP Address):",
+    placeholder="مثال: 185.240.64.12  أو  8.8.8.8"
+).strip()
 
+# Helper functions
+def is_valid_ip(ip):
+    pattern = r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+    if not re.match(pattern, ip):
+        return False
+    parts = ip.split(".")
+    return all(0 <= int(part) <= 255 for part in parts)
 
-def generate_nslkdd_benchmark_data(n_samples=6000):
-  np.random.seed(42)
-  n_normal = int(n_samples * 0.55)
-  n_attack = n_samples - n_normal
+def is_private_ip(ip):
+    parts = [int(x) for x in ip.split(".")]
+    if parts[0] == 10:
+        return True
+    if parts[0] == 172 and 16 <= parts[1] <= 31:
+        return True
+    if parts[0] == 192 and parts[1] == 168:
+        return True
+    if parts[0] == 127:
+        return True
+    return False
 
-  normal_df = pd.DataFrame({
-      "duration": np.random.exponential(scale=12, size=n_normal).astype(int),
-      "protocol_type": np.random.choice(
-          ["tcp", "udp", "icmp"], size=n_normal, p=[0.82, 0.15, 0.03]
-      ),
-      "service": np.random.choice(
-          ["http", "domain_u", "smtp", "ftp_data", "ssh"],
-          size=n_normal,
-          p=[0.6, 0.2, 0.1, 0.05, 0.05],
-      ),
-      "src_bytes": np.random.lognormal(mean=6.2, sigma=1.1, size=n_normal).astype(
-          int
-      ),
-      "dst_bytes": np.random.lognormal(mean=7.5, sigma=1.3, size=n_normal).astype(
-          int
-      ),
-      "count": np.random.randint(1, 25, size=n_normal),
-      "srv_count": np.random.randint(1, 25, size=n_normal),
-      "serror_rate": np.random.uniform(0.0, 0.08, size=n_normal).round(2),
-      "same_srv_rate": np.random.uniform(0.85, 1.0, size=n_normal).round(2),
-      "dst_host_count": np.random.randint(10, 180, size=n_normal),
-      "label": ["Normal"] * n_normal,
-  })
-
-  attack_df = pd.DataFrame({
-      "duration": np.random.randint(0, 5, size=n_attack),
-      "protocol_type": np.random.choice(
-          ["tcp", "udp", "icmp"], size=n_attack, p=[0.70, 0.10, 0.20]
-      ),
-      "service": np.random.choice(
-          ["private", "ecr_i", "http", "ftp", "telnet", "finger"], size=n_attack
-      ),
-      "src_bytes": np.random.randint(0, 1200, size=n_attack),
-      "dst_bytes": np.random.randint(0, 100, size=n_attack),
-      "count": np.random.randint(80, 511, size=n_attack),
-      "srv_count": np.random.randint(1, 40, size=n_attack),
-      "serror_rate": np.random.uniform(0.65, 1.0, size=n_attack).round(2),
-      "same_srv_rate": np.random.uniform(0.0, 0.35, size=n_attack).round(2),
-      "dst_host_count": np.random.randint(180, 256, size=n_attack),
-      "label": ["Attack"] * n_attack,
-  })
-
-  df = (
-      pd.concat([normal_df, attack_df], ignore_index=True)
-      .sample(frac=1, random_state=42)
-      .reset_index(drop=True)
-  )
-  return df
-
-
-@st.cache_resource
-def load_or_train_model():
-  df = generate_nslkdd_benchmark_data(8000)
-  features = [
-      "duration",
-      "protocol_type",
-      "service",
-      "src_bytes",
-      "dst_bytes",
-      "count",
-      "srv_count",
-      "serror_rate",
-      "same_srv_rate",
-      "dst_host_count",
-  ]
-  X = df[features].copy()
-  y = df["label"]
-
-  encoders = {}
-  for col in ["protocol_type", "service"]:
-    le = LabelEncoder()
-    X[col] = le.fit_transform(X[col])
-    encoders[col] = le
-
-  X_train, X_test, y_train, y_test = train_test_split(
-      X, y, test_size=0.2, random_state=42
-  )
-  model = RandomForestClassifier(n_estimators=100, random_state=42)
-  model.fit(X_train, y_train)
-  acc = accuracy_score(y_test, model.predict(X_test)) * 100
-
-  joblib.dump(model, MODEL_FILE)
-  joblib.dump(encoders, ENCODER_FILE)
-  return model, encoders, acc
-
-
-with st.spinner("Initializing AI Defense Engine & Training Random Forest..."):
-  model, encoders, accuracy = load_or_train_model()
-
-col1, col2, col3 = st.columns(3)
-col1.metric("Model Algorithm", "Random Forest (100 Trees)")
-col2.metric("Validation Accuracy", f"{accuracy:.2f}%")
-col3.metric("Features Analyzed", "10 Core Network Metrics")
-
-st.divider()
-
-tab1, tab2 = st.tabs(
-    ["🔍 Single Packet Inspector", "📊 Batch Network Traffic Analyzer"]
-)
-
-with tab1:
-  st.subheader("Simulate & Analyze Network Packet Parameters")
-  c1, c2, c3 = st.columns(3)
-  duration = c1.number_input("Connection Duration (sec)", min_value=0, value=0)
-  protocol = c2.selectbox(
-      "Protocol Type", list(encoders["protocol_type"].classes_)
-  )
-  service = c3.selectbox("Network Service", list(encoders["service"].classes_))
-
-  c4, c5, c6 = st.columns(3)
-  src_bytes = c4.number_input("Source Bytes", min_value=0, value=491)
-  dst_bytes = c5.number_input("Destination Bytes", min_value=0, value=1200)
-  count = c6.number_input("Connection Count (2 sec)", min_value=0, value=4)
-
-  c7, c8, c9, c10 = st.columns(4)
-  srv_count = c7.number_input("Service Count", min_value=0, value=4)
-  serror_rate = c8.slider("SYN Error Rate", 0.0, 1.0, 0.0)
-  same_srv_rate = c9.slider("Same Service Rate", 0.0, 1.0, 1.0)
-  dst_host_count = c10.number_input(
-      "Destination Host Count", min_value=0, max_value=255, value=80
-  )
-
-  if st.button("🚨 Analyze Packet Traffic", type="primary"):
-    input_data = pd.DataFrame([{
-        "duration": duration,
-        "protocol_type": encoders["protocol_type"].transform([protocol]),
-        "service": encoders["service"].transform([service]),
-        "src_bytes": src_bytes,
-        "dst_bytes": dst_bytes,
-        "count": count,
-        "srv_count": srv_count,
-        "serror_rate": serror_rate,
-        "same_srv_rate": same_srv_rate,
-        "dst_host_count": dst_host_count,
-    }])
-
-    prediction = model.predict(input_data)
-    proba = model.predict_proba(input_data)
-    confidence = max(proba) * 100
-
-    if prediction == "Normal":
-      st.success(
-          f"✅ **SAFE TRAFFIC (Normal)** — Confidence: **{confidence:.2f}%**"
-      )
-      st.info("No anomalous patterns or intrusion signatures detected.")
+# Scan Button
+if st.button("🔍 افحص أمان الشبكة الآن | Scan Network IP", type="primary", use_container_width=True):
+    if not ip_input:
+        st.warning("⚠️ يرجى إدخال عنوان IP أولاً لبدء الفحص.")
+    elif not is_valid_ip(ip_input):
+        st.error("❌ صيغة عنوان الـ IP غير صحيحة! يرجى التأكد من كتابته بشكل صحيح (مثل: 185.240.12.5).")
+    elif is_private_ip(ip_input):
+        st.markdown(f"""
+        <div class="warn-card">
+            <h3>⚠️ تنبيه: هذا عنوان IP محلي داخلي ({ip_input})</h3>
+            <p><b>ماذا يعني هذا؟</b> هذا عنوان الراوتر الداخلي للشبكة المحلية (Local Gateway) وليس عنوان الإنترنت العام (Public IP).</p>
+            <ul>
+                <li>إذا كنت في <b>كافيه أو شبكة عامة</b>: تأكد أن الشبكة محمية بكلمة مرور (WPA2/WPA3) وليست مفتوحة، ولا تقم بإدخال كلمات مرور حساباتك البنكية أو الشخصية عليها.</li>
+                <li>للحصول على <b>الـ IP العام</b> للشبكة وفحصه من الخارج: افتح متصفحك واكتب <i>"What is my IP"</i> ثم انسخ الرقم الظاهر والصقه هنا.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-      st.error(
-          f"⚠️ **CYBER ATTACK DETECTED (Intrusion)** — Confidence:"
-          f" **{confidence:.2f}%**"
-      )
-      st.warning(
-          "**Recommended Defense Action:** Isolate source IP, inspect firewall"
-          " logs for SYN flood / probing anomalies, and apply rate-limiting."
-      )
+        with st.spinner("جاري فحص الشبكة والمنافذ المفتوحة وهوية المزود..."):
+            risk_score = 0
+            findings = []
 
-with tab2:
-  st.subheader("Live Simulated Network Traffic Stream (500 Packets)")
-  if st.button("⚡ Run Automated Traffic Scan (500 Packets)"):
-    sample_df = generate_nslkdd_benchmark_data(500)
-    features = [
-        "duration",
-        "protocol_type",
-        "service",
-        "src_bytes",
-        "dst_bytes",
-        "count",
-        "srv_count",
-        "serror_rate",
-        "same_srv_rate",
-        "dst_host_count",
-    ]
-    X_sample = sample_df[features].copy()
+            isp_name = "غير معروف (Unknown)"
+            country_name = "غير معروف"
 
-    for col in ["protocol_type", "service"]:
-      X_sample[col] = encoders[col].transform(X_sample[col])
+            try:
+                url = f"http://ip-api.com{ip_input}?fields=status,country,isp,org,proxy,hosting"
+                req = urllib.request.urlopen(url, timeout=4)
+                geo_data = json.loads(req.read().decode("utf-8"))
+                if geo_data.get("status") == "success":
+                    isp_name = geo_data.get("isp", "Unknown")
+                    country_name = geo_data.get("country", "Unknown")
+                    if geo_data.get("proxy"):
+                        risk_score += 40
+                        findings.append("🚨 **تم رصد بروكسي/VPN مشبوه:** حركة المرور تمر عبر خادم وسيط قد يُستخدم لاعتراض البيانات.")
+                    if geo_data.get("hosting"):
+                        risk_score += 25
+                        findings.append("⚠️ **خادم استضافة (Data Center IP):** هذا العنوان يتبع سيرفراً سحابياً وليس شركة اتصالات منزلية أو كافيه عادي.")
+            except Exception:
+                findings.append("ℹ️ تعذر جلب بيانات مزود الخدمة الخارجي، تم الاكتفاء بفحص المنافذ.")
 
-    preds = model.predict(X_sample)
-    sample_df["AI_Prediction"] = preds
+            critical_ports = {
+                21: "FTP (نقل ملفات غير مشفر)",
+                22: "SSH (تحكم عن بُعد)",
+                23: "Telnet (خطير جداً - غير مشفر)",
+                80: "HTTP (تصفح غير مشفر)",
+                445: "SMB (مشاركة ملفات عرضة للاختراق)",
+                3389: "RDP (سطح مكتب بعيد)",
+                8080: "HTTP-Proxy (منفذ بروكسي مفتوح)"
+            }
 
-    summary = sample_df["AI_Prediction"].value_counts().reset_index()
-    summary.columns = ["Traffic Type", "Packet Count"]
+            open_ports = []
+            for port, desc in critical_ports.items():
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(0.5)
+                    if sock.connect_ex((ip_input, port)) == 0:
+                        open_ports.append(f"Port {port}: {desc}")
+                        if port in:
+                            risk_score += 30
+                        else:
+                            risk_score += 15
+                    sock.close()
+                except Exception:
+                    pass
 
-    c_left, c_right = st.columns(2)
-    with c_left:
-      fig = px.pie(
-          summary,
-          values="Packet Count",
-          names="Traffic Type",
-          color="Traffic Type",
-          color_discrete_map={"Normal": "#2ecc71", "Attack": "#e74c3c"},
-          title="Detected Traffic Distribution",
-      )
-      st.plotly_chart(fig, use_container_width=True)
-    with c_right:
-      st.dataframe(
-          sample_df[
-              ["protocol_type", "service", "src_bytes", "count", "AI_Prediction"]
-          ].head(15),
-          use_container_width=True,
-      )
+            if open_ports:
+                findings.append(f"🔌 **تم اكتشاف منافذ مفتوحة على الشبكة ({len(open_ports)}):**\n" + "\n".join([f"- `{p}`" for p in open_ports]))
+            else:
+                findings.append("🔒 **المنافذ الحساسة مغلقة ومحمية:** لم يتم العثور على ثغرات منافذ مكشوفة للخارج.")
 
-st.divider()
-st.markdown(
-    "<center>Developed with ❤️ by <b>Fatehi Abdulfattah Mohammed Ali"
-    " Alshami</b> | Powered by Machine Learning & Streamlit</center>",
-    unsafe_allow_html=True,
-)
+            risk_score = min(risk_score, 100)
+
+            st.divider()
+            col1, col2, col3 = st.columns(3)
+            col1.metric("مزود الخدمة (ISP)", isp_name[:22])
+            col2.metric("الدولة (Country)", country_name)
+            col3.metric("مؤشر الخطورة (Risk)", f"{risk_score}%")
+
+            if risk_score >= 50:
+                st.markdown(f"""
+                <div class="danger-card">
+                    <h3>🚨 تحذير خطير: هذه الشبكة غير آمنة! (نسبة الخطورة: {risk_score}%)</h3>
+                    <p><b>التوصية الأمنية:</b> لا تعتمد على هذه الشبكة ولا تُدخل فيها أي بيانات شخصية أو بنكية؛ هناك منافذ خطيرة مكشوفة أو توجيه مشبوه قد يعرض جهازك للاختراق.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            elif risk_score >= 20:
+                st.markdown(f"""
+                <div class="warn-card">
+                    <h3>⚠️ شبكة متوسطة الأمان: استخدمها بحذر (نسبة الخطورة: {risk_score}%)</h3>
+                    <p><b>التوصية الأمنية:</b> الشبكة تعمل ولكن توجد بعض المنافذ المفتوحة. يُنصح بتشغيل <b>VPN</b> لحماية اتصالك أثناء التصفح.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="safe-card">
+                    <h3>✅ الشبكة آمنة ومحمية (نسبة الخطورة: {risk_score}%)</h3>
+                    <p><b>التوصية الأمنية:</b> عنوان الـ IP يتبع مزود خدمة موثوق وجميع المنافذ الخطيرة مغلقة. يمكنك التصفح بأمان.</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown("#### 📋 تفاصيل تقرير الفحص:")
+            for item in findings:
+                st.markdown(item)
