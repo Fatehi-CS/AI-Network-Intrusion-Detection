@@ -3,7 +3,9 @@
 **Engineered & Developed by:** Fatehi Abdulfattah Mohammed Ali Alshami (`@Fatehi-CS`)  
 **Part of:** *The Digital Shield* Cybersecurity Initiative  
 
-🔗 **Live Interactive Web Application:** [https://streamlit.app](https://streamlit.app)
+🔗 **Live Interactive Web Application:** https://fatehi-ai-nids.streamlit.app
+
+
 
 ---
 
