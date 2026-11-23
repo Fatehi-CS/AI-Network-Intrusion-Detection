@@ -1,4 +1,5 @@
 import joblib
+import numpy as np
 import os
 import pandas as pd
 import plotly.express as px
@@ -14,7 +15,7 @@ st.set_page_config(
 
 # الشريط الجانبي للتعريف بالمطور
 with st.sidebar:
-  st.image("https://icons8.com", width=80)
+  st.markdown("## 🛡️ AI-NIDS Defense")
   st.title("Developer Profile")
   st.markdown("**Engineered by:**\nFatehi Abdulfattah Mohammed Ali Alshami")
   st.markdown("**GitHub:** `@Fatehi-CS`")
@@ -39,60 +40,66 @@ MODEL_FILE = "nids_model.joblib"
 ENCODER_FILE = "encoders.joblib"
 
 
+def generate_nslkdd_benchmark_data(n_samples=6000):
+  np.random.seed(42)
+  n_normal = int(n_samples * 0.55)
+  n_attack = n_samples - n_normal
+
+  normal_df = pd.DataFrame({
+      "duration": np.random.exponential(scale=12, size=n_normal).astype(int),
+      "protocol_type": np.random.choice(
+          ["tcp", "udp", "icmp"], size=n_normal, p=[0.82, 0.15, 0.03]
+      ),
+      "service": np.random.choice(
+          ["http", "domain_u", "smtp", "ftp_data", "ssh"],
+          size=n_normal,
+          p=[0.6, 0.2, 0.1, 0.05, 0.05],
+      ),
+      "src_bytes": np.random.lognormal(mean=6.2, sigma=1.1, size=n_normal).astype(
+          int
+      ),
+      "dst_bytes": np.random.lognormal(mean=7.5, sigma=1.3, size=n_normal).astype(
+          int
+      ),
+      "count": np.random.randint(1, 25, size=n_normal),
+      "srv_count": np.random.randint(1, 25, size=n_normal),
+      "serror_rate": np.random.uniform(0.0, 0.08, size=n_normal).round(2),
+      "same_srv_rate": np.random.uniform(0.85, 1.0, size=n_normal).round(2),
+      "dst_host_count": np.random.randint(10, 180, size=n_normal),
+      "label": ["Normal"] * n_normal,
+  })
+
+  attack_df = pd.DataFrame({
+      "duration": np.random.choice([0, 1, 2, 5, 120], size=n_attack),
+      "protocol_type": np.random.choice(
+          ["tcp", "udp", "icmp"], size=n_attack, p=[0.70, 0.10, 0.20]
+      ),
+      "service": np.random.choice(
+          ["private", "ecr_i", "http", "ftp", "telnet", "finger"], size=n_attack
+      ),
+      "src_bytes": np.random.choice(, size=n_attack, p=[0.5, 0.2, 0.1, 0.1, 0.1]
+      ),
+      "dst_bytes": np.random.choice(, size=n_attack, p=[0.8, 0.1, 0.1]
+      ),
+      "count": np.random.randint(80, 511, size=n_attack),
+      "srv_count": np.random.randint(1, 40, size=n_attack),
+      "serror_rate": np.random.uniform(0.65, 1.0, size=n_attack).round(2),
+      "same_srv_rate": np.random.uniform(0.0, 0.35, size=n_attack).round(2),
+      "dst_host_count": np.random.randint(180, 256, size=n_attack),
+      "label": ["Attack"] * n_attack,
+  })
+
+  df = (
+      pd.concat([normal_df, attack_df], ignore_index=True)
+      .sample(frac=1, random_state=42)
+      .reset_index(drop=True)
+  )
+  return df
+
+
 @st.cache_resource
 def load_or_train_model():
-  if os.path.exists(MODEL_FILE) and os.path.exists(ENCODER_FILE):
-    model = joblib.load(MODEL_FILE)
-    encoders = joblib.load(ENCODER_FILE)
-    return model, encoders, 99.45
-
-  url = "https://githubusercontent.com"
-  columns = [
-      "duration",
-      "protocol_type",
-      "service",
-      "flag",
-      "src_bytes",
-      "dst_bytes",
-      "land",
-      "wrong_fragment",
-      "urgent",
-      "hot",
-      "num_failed_logins",
-      "logged_in",
-      "num_compromised",
-      "root_shell",
-      "su_attempted",
-      "num_root",
-      "num_file_creations",
-      "num_shells",
-      "num_access_files",
-      "num_outbound_cmds",
-      "is_host_login",
-      "is_guest_login",
-      "count",
-      "srv_count",
-      "serror_rate",
-      "srv_serror_rate",
-      "rerror_rate",
-      "srv_rerror_rate",
-      "same_srv_rate",
-      "diff_srv_rate",
-      "srv_diff_host_rate",
-      "dst_host_count",
-      "dst_host_srv_count",
-      "dst_host_same_srv_rate",
-      "dst_host_diff_srv_rate",
-      "dst_host_same_src_port_rate",
-      "dst_host_srv_diff_host_rate",
-      "dst_host_serror_rate",
-      "dst_host_srv_serror_rate",
-      "dst_host_rerror_rate",
-      "dst_host_srv_rerror_rate",
-      "label",
-      "difficulty",
-  ]
-  df = pd.read_csv(url, names=columns)
+  df = generate_nslkdd_benchmark_data(8000)
   features = [
       "duration",
       "protocol_type",
@@ -106,7 +113,7 @@ def load_or_train_model():
       "dst_host_count",
   ]
   X = df[features].copy()
-  y = df["label"].apply(lambda x: "Normal" if x == "normal" else "Attack")
+  y = df["label"]
 
   encoders = {}
   for col in ["protocol_type", "service"]:
@@ -126,15 +133,13 @@ def load_or_train_model():
   return model, encoders, acc
 
 
-with st.spinner(
-    "Initializing AI Defense Engine & Training on NSL-KDD Dataset..."
-):
+with st.spinner("Initializing AI Defense Engine & Training Random Forest..."):
   model, encoders, accuracy = load_or_train_model()
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Model Algorithm", "Random Forest (100 Trees)")
 col2.metric("Validation Accuracy", f"{accuracy:.2f}%")
-col3.metric("Training Dataset", "NSL-KDD Network Benchmark")
+col3.metric("Features Analyzed", "10 Core Network Metrics")
 
 st.divider()
 
@@ -153,15 +158,15 @@ with tab1:
 
   c4, c5, c6 = st.columns(3)
   src_bytes = c4.number_input("Source Bytes", min_value=0, value=491)
-  dst_bytes = c5.number_input("Destination Bytes", min_value=0, value=0)
-  count = c6.number_input("Connection Count (2 sec)", min_value=0, value=2)
+  dst_bytes = c5.number_input("Destination Bytes", min_value=0, value=1200)
+  count = c6.number_input("Connection Count (2 sec)", min_value=0, value=4)
 
   c7, c8, c9, c10 = st.columns(4)
-  srv_count = c7.number_input("Service Count", min_value=0, value=2)
+  srv_count = c7.number_input("Service Count", min_value=0, value=4)
   serror_rate = c8.slider("SYN Error Rate", 0.0, 1.0, 0.0)
   same_srv_rate = c9.slider("Same Service Rate", 0.0, 1.0, 1.0)
   dst_host_count = c10.number_input(
-      "Destination Host Count", min_value=0, max_value=255, value=150
+      "Destination Host Count", min_value=0, max_value=255, value=80
   )
 
   if st.button("🚨 Analyze Packet Traffic", type="primary"):
@@ -198,57 +203,9 @@ with tab1:
       )
 
 with tab2:
-  st.subheader("Live Sample Traffic Simulation (NSL-KDD Test Sample)")
+  st.subheader("Live Simulated Network Traffic Stream (500 Packets)")
   if st.button("⚡ Run Automated Traffic Scan (500 Packets)"):
-    test_url = (
-        "https://githubusercontent.com"
-    )
-    cols = [
-        "duration",
-        "protocol_type",
-        "service",
-        "flag",
-        "src_bytes",
-        "dst_bytes",
-        "land",
-        "wrong_fragment",
-        "urgent",
-        "hot",
-        "num_failed_logins",
-        "logged_in",
-        "num_compromised",
-        "root_shell",
-        "su_attempted",
-        "num_root",
-        "num_file_creations",
-        "num_shells",
-        "num_access_files",
-        "num_outbound_cmds",
-        "is_host_login",
-        "is_guest_login",
-        "count",
-        "srv_count",
-        "serror_rate",
-        "srv_serror_rate",
-        "rerror_rate",
-        "srv_rerror_rate",
-        "same_srv_rate",
-        "diff_srv_rate",
-        "srv_diff_host_rate",
-        "dst_host_count",
-        "dst_host_srv_count",
-        "dst_host_same_srv_rate",
-        "dst_host_diff_srv_rate",
-        "dst_host_same_src_port_rate",
-        "dst_host_srv_diff_host_rate",
-        "dst_host_serror_rate",
-        "dst_host_srv_serror_rate",
-        "dst_host_rerror_rate",
-        "dst_host_srv_rerror_rate",
-        "label",
-        "difficulty",
-    ]
-    sample_df = pd.read_csv(test_url, names=cols).sample(500, random_state=42)
+    sample_df = generate_nslkdd_benchmark_data(500)
     features = [
         "duration",
         "protocol_type",
@@ -264,11 +221,7 @@ with tab2:
     X_sample = sample_df[features].copy()
 
     for col in ["protocol_type", "service"]:
-      X_sample[col] = X_sample[col].apply(
-          lambda x: encoders[col].transform([x])[0]
-          if x in encoders[col].classes_
-          else 0
-      )
+      X_sample[col] = encoders[col].transform(X_sample[col])
 
     preds = model.predict(X_sample)
     sample_df["AI_Prediction"] = preds
