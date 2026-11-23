@@ -16,7 +16,7 @@ st.markdown("""
 <style>
     .main-title {
         text-align: center;
-        font-size: 2.2rem;
+        font-size: 2.1rem;
         font-weight: 800;
         color: #1E88E5;
         margin-bottom: 0.2rem;
@@ -25,54 +25,77 @@ st.markdown("""
         text-align: center;
         font-size: 1.05rem;
         color: #90A4AE;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
     .safe-card {
-        padding: 1.5rem;
+        padding: 1.4rem;
         border-radius: 12px;
         background-color: rgba(46, 125, 50, 0.15);
         border: 2px solid #2E7D32;
-        margin-top: 1.5rem;
+        margin-top: 1.2rem;
     }
     .danger-card {
-        padding: 1.5rem;
+        padding: 1.4rem;
         border-radius: 12px;
         background-color: rgba(198, 40, 40, 0.15);
         border: 2px solid #C62828;
-        margin-top: 1.5rem;
+        margin-top: 1.2rem;
     }
     .warn-card {
-        padding: 1.5rem;
+        padding: 1.4rem;
         border-radius: 12px;
         background-color: rgba(245, 124, 0, 0.15);
         border: 2px solid #F57C00;
-        margin-top: 1.5rem;
+        margin-top: 1.2rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# Top Language Switcher (Default: English)
+col_spacer, col_lang = st.columns([3, 1.3])
+with col_lang:
+    lang = st.radio("🌐 Language", ["English", "العربية"], horizontal=True, label_visibility="collapsed")
+
+is_ar = (lang == "العربية")
+
 # Sidebar - Developer Info
 with st.sidebar:
-    st.image("https://icons8.com", width=75)
+    st.markdown("# 🛡️")
     st.title("The Digital Shield")
-    st.markdown("**Pre-Connection Wi-Fi & IP Security Scanner (AI-NIDS)**")
-    st.divider()
-    st.markdown("### 👨‍💻 المطور | Developer")
-    st.write("**Fatehi Abdulfattah Mohammed Ali Alshami**")
-    st.markdown("🔗 [GitHub Repository](https://github.com)")
-    st.divider()
-    st.markdown("### 🎓 الشهادات | Certifications")
-    st.info("• Cisco Junior Cybersecurity Analyst\n• Cisco Modern AI Principles")
+    if is_ar:
+        st.markdown("**نظام فحص أمان الشبكات وعناوين الـ IP (AI-NIDS)**")
+        st.divider()
+        st.markdown("### 👨‍💻 المطور")
+        st.write("**Fatehi Abdulfattah Mohammed Ali Alshami**")
+        st.markdown("🔗 [مستودع الكود على GitHub](https://github.com)")
+        st.divider()
+        st.markdown("### 🎓 الشهادات")
+        st.info("• محلل أمن سيبراني معتمد من سيسكو\n• مبادئ الذكاء الاصطناعي الحديثة من سيسكو")
+    else:
+        st.markdown("**Pre-Connection Wi-Fi & IP Security Scanner (AI-NIDS)**")
+        st.divider()
+        st.markdown("### 👨‍💻 Developer")
+        st.write("**Fatehi Abdulfattah Mohammed Ali Alshami**")
+        st.markdown("🔗 [GitHub Repository](https://github.com)")
+        st.divider()
+        st.markdown("### 🎓 Certifications")
+        st.info("• Cisco Junior Cybersecurity Analyst\n• Cisco Modern AI Principles")
 
 # Main Header
-st.markdown('<div class="main-title">🛡️ فاحص أمان الشبكة والـ IP</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">تأكد من أمان أي شبكة Wi-Fi في كافيه أو مكان عام عبر فحص عنوان الـ IP الخاص بها</div>', unsafe_allow_html=True)
+if is_ar:
+    st.markdown('<div class="main-title">🛡️ فاحص أمان الشبكة والـ IP</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">تأكد من أمان أي شبكة Wi-Fi في كافيه أو مكان عام عبر فحص عنوان الـ IP الخاص بها</div>', unsafe_allow_html=True)
+    input_label = "أدخل أو الصق عنوان الـ IP الخاص بالشبكة هنا:"
+    input_placeholder = "مثال: 8.8.8.8  أو  185.240.64.12"
+    btn_text = "🔍 افحص أمان الشبكة الآن"
+else:
+    st.markdown('<div class="main-title">🛡️ Wi-Fi & Network IP Safety Scanner</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Verify the security of any public or café Wi-Fi network by inspecting its IP address before trusting it</div>', unsafe_allow_html=True)
+    input_label = "Enter or Paste Network IP Address:"
+    input_placeholder = "Example: 8.8.8.8 or 185.240.64.12"
+    btn_text = "🔍 Scan Network IP Now"
 
-# Input Box
-ip_input = st.text_input(
-    "أدخل أو الصق عنوان الـ IP الخاص بالشبكة هنا (Paste Network IP Address):",
-    placeholder="مثال: 185.240.64.12  أو  8.8.8.8"
-).strip()
+ip_input = st.text_input(input_label, placeholder=input_placeholder).strip()
 
 # Helper functions
 def is_valid_ip(ip):
@@ -94,109 +117,103 @@ def is_private_ip(ip):
         return True
     return False
 
-# Scan Button
-if st.button("🔍 افحص أمان الشبكة الآن | Scan Network IP", type="primary", use_container_width=True):
+# Scan Action
+if st.button(btn_text, type="primary", use_container_width=True):
     if not ip_input:
-        st.warning("⚠️ يرجى إدخال عنوان IP أولاً لبدء الفحص.")
+        st.warning("⚠️ يرجى إدخال عنوان IP أولاً لبدء الفحص." if is_ar else "⚠️ Please enter an IP address first to start scanning.")
     elif not is_valid_ip(ip_input):
-        st.error("❌ صيغة عنوان الـ IP غير صحيحة! يرجى التأكد من كتابته بشكل صحيح (مثل: 185.240.12.5).")
+        st.error("❌ صيغة عنوان الـ IP غير صحيحة! يرجى التأكد من كتابته بشكل صحيح (مثل: 8.8.8.8)." if is_ar else "❌ Invalid IP address format! Please enter a valid IPv4 address (e.g., 8.8.8.8).")
     elif is_private_ip(ip_input):
-        st.markdown(f"""
-        <div class="warn-card">
-            <h3>⚠️ تنبيه: هذا عنوان IP محلي داخلي ({ip_input})</h3>
-            <p><b>ماذا يعني هذا؟</b> هذا عنوان الراوتر الداخلي للشبكة المحلية (Local Gateway) وليس عنوان الإنترنت العام (Public IP).</p>
-            <ul>
-                <li>إذا كنت في <b>كافيه أو شبكة عامة</b>: تأكد أن الشبكة محمية بكلمة مرور (WPA2/WPA3) وليست مفتوحة، ولا تقم بإدخال كلمات مرور حساباتك البنكية أو الشخصية عليها.</li>
-                <li>للحصول على <b>الـ IP العام</b> للشبكة وفحصه من الخارج: افتح متصفحك واكتب <i>"What is my IP"</i> ثم انسخ الرقم الظاهر والصقه هنا.</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+        if is_ar:
+            st.markdown(f"""
+            <div class="warn-card" dir="rtl">
+                <h3>⚠️ تنبيه: هذا عنوان IP محلي داخلي ({ip_input})</h3>
+                <p><b>ماذا يعني هذا؟</b> هذا عنوان الراوتر الداخلي للشبكة المحلية (Local Gateway) وليس عنوان الإنترنت العام (Public IP).</p>
+                <ul>
+                    <li>إذا كنت في <b>كافيه أو شبكة عامة</b>: تأكد أن الشبكة محمية بكلمة مرور (WPA2/WPA3) وليست مفتوحة، ولا تدخل بياناتك البنكية عليها.</li>
+                    <li>للحصول على <b>الـ IP العام</b> للشبكة وفحصه من الخارج: افتح متصفحك واكتب <i>"What is my IP"</i> ثم انسخ الرقم الظاهر والصقه هنا.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="warn-card">
+                <h3>⚠️ Notice: Private Local IP Address ({ip_input})</h3>
+                <p><b>What does this mean?</b> This is an internal local router gateway address, not the network's external Public IP.</p>
+                <ul>
+                    <li>If you are on a <b>café or public Wi-Fi</b>: Ensure the network uses WPA2/WPA3 encryption and avoid entering sensitive banking credentials.</li>
+                    <li>To scan the network's <b>Public IP</b>: Search <i>"What is my IP"</i> in your browser, copy the public address, and paste it here.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        with st.spinner("جاري فحص الشبكة والمنافذ المفتوحة وهوية المزود..."):
+        spinner_msg = "جاري فحص الشبكة والمنافذ المفتوحة وهوية المزود..." if is_ar else "Scanning network IP, open ports, and ISP reputation..."
+        with st.spinner(spinner_msg):
             risk_score = 0
             findings = []
 
-            isp_name = "غير معروف (Unknown)"
-            country_name = "غير معروف"
+            isp_name = "غير معروف" if is_ar else "Unknown"
+            country_name = "غير معروف" if is_ar else "Unknown"
 
+            # Fetch ISP & Country using HTTPS ipwho.is API
             try:
-                url = f"http://ip-api.com{ip_input}?fields=status,country,isp,org,proxy,hosting"
-                req = urllib.request.urlopen(url, timeout=4)
-                geo_data = json.loads(req.read().decode("utf-8"))
-                if geo_data.get("status") == "success":
-                    isp_name = geo_data.get("isp", "Unknown")
-                    country_name = geo_data.get("country", "Unknown")
-                    if geo_data.get("proxy"):
-                        risk_score += 40
-                        findings.append("🚨 **تم رصد بروكسي/VPN مشبوه:** حركة المرور تمر عبر خادم وسيط قد يُستخدم لاعتراض البيانات.")
-                    if geo_data.get("hosting"):
-                        risk_score += 25
-                        findings.append("⚠️ **خادم استضافة (Data Center IP):** هذا العنوان يتبع سيرفراً سحابياً وليس شركة اتصالات منزلية أو كافيه عادي.")
+                url = f"https://ipwho.is{ip_input}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    geo_data = json.loads(response.read().decode("utf-8"))
+                    if geo_data.get("success"):
+                        conn = geo_data.get("connection", {})
+                        isp_name = conn.get("isp") or conn.get("org") or isp_name
+                        country_name = geo_data.get("country") or country_name
+                        sec = geo_data.get("security", {})
+                        if sec.get("proxy") or sec.get("vpn") or sec.get("tor"):
+                            risk_score += 40
+                            findings.append(
+                                "🚨 **تم رصد بروكسي/VPN مشبوه:** حركة المرور تمر عبر خادم وسيط قد يُستخدم لاعتراض البيانات." if is_ar else
+                                "🚨 **Proxy/VPN Detected:** Traffic is routed through an intermediary server that could intercept data."
+                            )
+                        if sec.get("hosting"):
+                            risk_score += 20
+                            findings.append(
+                                "⚠️ **خادم استضافة سحابي (Hosting IP):** هذا العنوان يتبع مركز بيانات وليس شركة اتصالات تقليدية." if is_ar else
+                                "⚠️ **Cloud Hosting IP:** This IP belongs to a data center rather than a standard residential/café ISP."
+                            )
             except Exception:
-                findings.append("ℹ️ تعذر جلب بيانات مزود الخدمة الخارجي، تم الاكتفاء بفحص المنافذ.")
+                findings.append(
+                    "ℹ️ تعذر جلب بيانات المزود الخارجي حالياً، تم الاعتماد على فحص المنافذ المباشر." if is_ar else
+                    "ℹ️ External ISP lookup unavailable; proceeding with direct port security scan."
+                )
 
+            # Scan Critical Ports
             critical_ports = {
-                21: "FTP (نقل ملفات غير مشفر)",
-                22: "SSH (تحكم عن بُعد)",
-                23: "Telnet (خطير جداً - غير مشفر)",
-                80: "HTTP (تصفح غير مشفر)",
-                445: "SMB (مشاركة ملفات عرضة للاختراق)",
-                3389: "RDP (سطح مكتب بعيد)",
-                8080: "HTTP-Proxy (منفذ بروكسي مفتوح)"
+                21: ("FTP (نقل ملفات غير مشفر)", "FTP (Unencrypted File Transfer)"),
+                22: ("SSH (تحكم عن بُعد)", "SSH (Remote Access)"),
+                23: ("Telnet (خطير جداً - غير مشفر)", "Telnet (Critical - Unencrypted)"),
+                80: ("HTTP (تصفح غير مشفر)", "HTTP (Unencrypted Web)"),
+                445: ("SMB (مشاركة ملفات عرضة للاختراق)", "SMB (File Sharing Exposure)"),
+                3389: ("RDP (سطح مكتب بعيد)", "RDP (Remote Desktop)"),
+                8080: ("HTTP-Proxy (منفذ بروكسي مفتوح)", "HTTP-Proxy (Open Proxy Port)")
             }
 
             high_risk_list = (21, 23, 445, 3389)
             open_ports = []
 
-            for port, desc in critical_ports.items():
+            for port, (desc_ar, desc_en) in critical_ports.items():
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(0.5)
                     if sock.connect_ex((ip_input, port)) == 0:
+                        desc = desc_ar if is_ar else desc_en
                         open_ports.append(f"Port {port}: {desc}")
-                        if port in high_risk_list:
-                            risk_score += 30
-                        else:
-                            risk_score += 15
+                        risk_score += 30 if port in high_risk_list else 15
                     sock.close()
                 except Exception:
                     pass
 
             if open_ports:
-                findings.append(f"🔌 **تم اكتشاف منافذ مفتوحة على الشبكة ({len(open_ports)}):**\n" + "\n".join([f"- `{p}`" for p in open_ports]))
+                if is_ar:
+                    findings.append(f"🔌 **تم اكتشاف منافذ مفتوحة على الشبكة ({len(open_ports)}):**\n" + "\n".join([f"- `{p}`" for p in open_ports]))
+                else:
+                    findings.append(f"🔌 **Open Network Ports Detected ({len(open_ports)}):**\n" + "\n".join([f"- `{p}`" for p in open_ports]))
             else:
-                findings.append("🔒 **المنافذ الحساسة مغلقة ومحمية:** لم يتم العثور على ثغرات منافذ مكشوفة للخارج.")
-
-            risk_score = min(risk_score, 100)
-
-            st.divider()
-            col1, col2, col3 = st.columns(3)
-            col1.metric("مزود الخدمة (ISP)", isp_name[:22])
-            col2.metric("الدولة (Country)", country_name)
-            col3.metric("مؤشر الخطورة (Risk)", f"{risk_score}%")
-
-            if risk_score >= 50:
-                st.markdown(f"""
-                <div class="danger-card">
-                    <h3>🚨 تحذير خطير: هذه الشبكة غير آمنة! (نسبة الخطورة: {risk_score}%)</h3>
-                    <p><b>التوصية الأمنية:</b> لا تعتمد على هذه الشبكة ولا تُدخل فيها أي بيانات شخصية أو بنكية؛ هناك منافذ خطيرة مكشوفة أو توجيه مشبوه قد يعرض جهازك للاختراق.</p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif risk_score >= 20:
-                st.markdown(f"""
-                <div class="warn-card">
-                    <h3>⚠️ شبكة متوسطة الأمان: استخدمها بحذر (نسبة الخطورة: {risk_score}%)</h3>
-                    <p><b>التوصية الأمنية:</b> الشبكة تعمل ولكن توجد بعض المنافذ المفتوحة. يُنصح بتشغيل <b>VPN</b> لحماية اتصالك أثناء التصفح.</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="safe-card">
-                    <h3>✅ الشبكة آمنة ومحمية (نسبة الخطورة: {risk_score}%)</h3>
-                    <p><b>التوصية الأمنية:</b> عنوان الـ IP يتبع مزود خدمة موثوق وجميع المنافذ الخطيرة مغلقة. يمكنك التصفح بأمان.</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.markdown("#### 📋 تفاصيل تقرير الفحص:")
-            for item in findings:
-                st.markdown(item)
+                findings.append(
