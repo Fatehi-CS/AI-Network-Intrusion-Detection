@@ -86,7 +86,7 @@ def is_private_ip(ip):
     parts = [int(x) for x in ip.split(".")]
     if parts[0] == 10:
         return True
-    if parts[0] == 172 and 16 <= parts[1] <= 31:
+    if parts[0] == 172 and (16 <= parts[1] <= 31):
         return True
     if parts[0] == 192 and parts[1] == 168:
         return True
@@ -145,14 +145,16 @@ if st.button("🔍 افحص أمان الشبكة الآن | Scan Network IP", t
                 8080: "HTTP-Proxy (منفذ بروكسي مفتوح)"
             }
 
+            high_risk_list = (21, 23, 445, 3389)
             open_ports = []
+
             for port, desc in critical_ports.items():
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(0.5)
                     if sock.connect_ex((ip_input, port)) == 0:
                         open_ports.append(f"Port {port}: {desc}")
-                        if port in:
+                        if port in high_risk_list:
                             risk_score += 30
                         else:
                             risk_score += 15
