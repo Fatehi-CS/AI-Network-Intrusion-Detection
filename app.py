@@ -70,17 +70,15 @@ def generate_nslkdd_benchmark_data(n_samples=6000):
   })
 
   attack_df = pd.DataFrame({
-      "duration": np.random.choice([0, 1, 2, 5, 120], size=n_attack),
+      "duration": np.random.randint(0, 5, size=n_attack),
       "protocol_type": np.random.choice(
           ["tcp", "udp", "icmp"], size=n_attack, p=[0.70, 0.10, 0.20]
       ),
       "service": np.random.choice(
           ["private", "ecr_i", "http", "ftp", "telnet", "finger"], size=n_attack
       ),
-      "src_bytes": np.random.choice(, size=n_attack, p=[0.5, 0.2, 0.1, 0.1, 0.1]
-      ),
-      "dst_bytes": np.random.choice(, size=n_attack, p=[0.8, 0.1, 0.1]
-      ),
+      "src_bytes": np.random.randint(0, 1200, size=n_attack),
+      "dst_bytes": np.random.randint(0, 100, size=n_attack),
       "count": np.random.randint(80, 511, size=n_attack),
       "srv_count": np.random.randint(1, 40, size=n_attack),
       "serror_rate": np.random.uniform(0.65, 1.0, size=n_attack).round(2),
@@ -172,8 +170,8 @@ with tab1:
   if st.button("🚨 Analyze Packet Traffic", type="primary"):
     input_data = pd.DataFrame([{
         "duration": duration,
-        "protocol_type": encoders["protocol_type"].transform([protocol])[0],
-        "service": encoders["service"].transform([service])[0],
+        "protocol_type": encoders["protocol_type"].transform([protocol]),
+        "service": encoders["service"].transform([service]),
         "src_bytes": src_bytes,
         "dst_bytes": dst_bytes,
         "count": count,
@@ -183,8 +181,8 @@ with tab1:
         "dst_host_count": dst_host_count,
     }])
 
-    prediction = model.predict(input_data)[0]
-    proba = model.predict_proba(input_data)[0]
+    prediction = model.predict(input_data)
+    proba = model.predict_proba(input_data)
     confidence = max(proba) * 100
 
     if prediction == "Normal":
